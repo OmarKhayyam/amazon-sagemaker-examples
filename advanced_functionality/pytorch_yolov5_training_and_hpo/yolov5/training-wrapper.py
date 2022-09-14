@@ -4,6 +4,8 @@ import os
 import sys
 import argparse
 import shutil
+import shlex
+import subprocess
 import yaml 
 import boto3
 import botocore
@@ -27,7 +29,12 @@ def createHypsFile(opts):
     except OSError:
         print("Could not open file {} for training initialization".format(SMHYPFILE)) 
         sys.exit(44)
-    args = yaml.dump(opts,hypfile)    
+    try:
+        args = yaml.dump(opts,hypfile)
+    except:    
+        print("** TRAINING FAILED TO INITIALIZE **")
+        hypfile.close()
+        sys.exit(45) 
     hypfile.close()
     return " --hyp " + SMHYPFILE
 
@@ -184,8 +191,9 @@ if __name__ == "__main__":
     with open(SMHYPFILE) as f:
         print(f.read())
     print("**Executing** : {}".format(cmd))
-    status = os.system(cmd) ## We will replace this with subprocess.Popen once we see that this works
-    if status != 0:
-        print("Training failure!")
-    else:    
-        print("Training succeeded!")
+    try:
+        subprocess.run(shlex.split(cmd),check=True,encoding="utf-8")
+    except subprocess.CalledProcessError as e:
+        print("###*** TRAINING FAILED ***###")
+        print("Returned code : {}".format(e.returncode))
+        sys.exit(45)
