@@ -58,7 +58,7 @@ def buildCMD(arguments):
     argls = (arguments.__dict__).items()    
     
     for arg in argls:
-        if arg[1] is None:
+        if arg[1] is None or arg[0] in ['train','val']:
             continue
         elif arg[1] is not None and arg[0] in non_hyps:
             if arg[0] == 'batchsize':
@@ -66,8 +66,7 @@ def buildCMD(arguments):
             else:
                 initialstr += " --" + str(arg[0]) + " " + str(arg[1])
         else:
-            opts[str(arg[0])] = str(arg[1])
-
+            opts[str(arg[0])] = arg[1]
     initialstr += createHypsFile(opts)
 
     return initialstr
