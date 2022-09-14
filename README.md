@@ -186,6 +186,7 @@ These examples showcase unique functionality available in Amazon SageMaker. They
 - [Host Multiple Models with SKLearn](advanced_functionality/multi_model_sklearn_home_value) shows how to deploy multiple models to a realtime hosted endpoint using a multi-model enabled SKLearn container.
 - [SageMaker Training and Inference with Script Mode](sagemaker-script-mode) shows how to use custom training and inference scripts, similar to those you would use outside of SageMaker, with SageMaker's prebuilt containers for various frameworks like Scikit-learn, PyTorch, and XGBoost.
 - [Host Models with NVidia Triton Server](sagemaker-triton) shows how to deploy models to a realtime hosted endpoint using [Triton](https://developer.nvidia.com/nvidia-triton-inference-server) as the model inference server.
+- [Transfer Learning and Hyperparameter Optimization for YOLOv5 using Amazon SageMaker](advanced_functionality/pytorch_yolov5_training_and_hpo) shows how to use Amazon SageMaker training and automated model tuning for [YOLOv5](https://ultralytics.com/yolov5) with a custom dataset by customising a [DLC](https://github.com/aws/deep-learning-containers/blob/master/available_images.md), and demonstrating a custom framework that can be used for training and for automated model tuning for a YOLOv5 model.
 
 ### Amazon SageMaker Neo Compilation Jobs
 
