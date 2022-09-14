@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import argparse
 import shutil
-import yaml ## pyyaml has to be installed for this to work
+import yaml 
 import boto3
 import botocore
 
 DATACFGFILE = '/yolov5/datacfg.yaml'
 SMHYPFILE = '/yolov5/sagemaker-hyps.yaml'
+DEFYOLOHYPFILE = '/yolov5/data/hyps/hyp.scratch-low.yaml'
 
 def buildDataConfig(trainingdata,validationdata):
     dictfile = {"train": trainingdata + "/images", "val": validationdata + "/images", "nc": 1, "names": ["licence"]}
@@ -20,90 +22,54 @@ def createHypsFile(opts):
     ## Create a new file that we can use
     if os.path.exists(SMHYPFILE):
         os.remove(SMHYPFILE)
-    hypfile = open(SMHYPFILE,'w') # New file
+    try:
+        hypfile = open(SMHYPFILE,'w') # New file
+    except OSError:
+        print("Could not open file {} for training initialization".format(SMHYPFILE)) 
+        sys.exit(44)
     args = yaml.dump(opts,hypfile)    
     hypfile.close()
     return " --hyp " + SMHYPFILE
 
 def buildCMD(arguments):
-    initialstr = "/opt/conda/bin/python3.8 /yolov5/train.py --project /opt/ml/model --cache "
-    if arguments.batchsize:
-        initialstr += " --batch " + str(arguments.batchsize)
-    if arguments.freeze:
-        initialstr += " --freeze " + str(arguments.freeze)
-    if arguments.epochs:
-        initialstr += " --epochs " + str(arguments.epochs)
-    if arguments.patience:
-       initialstr += " --patience " + str(arguments.patience) 
-    if arguments.name:
-       initialstr += " --name " + str(arguments.name) 
-    ## Our default hyperparameter values are sourced from yolov5/data/hyps/hyp.scratch-low.yaml
-    ## We then override what we want changed.
-    defhyps = open('/yolov5/data/hyps/hyp.scratch-low.yaml')
-    params = yaml.full_load(defhyps)
-    defhyps.close()
+    # Initialize the non-hyps hyper-parameters
+    non_hyps = ['batchsize','freeze','epochs','patience','name']
     opts = dict()
+    ## Our default hyperparameter values are sourced from 
+    ## yolov5/data/hyps/hyp.scratch-low.yaml
+    ## We then override what we want changed.
+    try:
+        defhyps = open(DEFYOLOHYPFILE)
+    except OSError:
+        print("Could not open file {} for training initialization".format(DEFYOLOHYPFILE))
+    try:
+        params = yaml.full_load(defhyps)
+    except:
+        print("** TRAINING FAILED TO INITIALIZE **")
+        defhyps.close()
+        sys.exit(43)
+    defhyps.close()
+    # Set up default hyper-parameter values
     for item,value in params.items():
         opts[item] = value
 
-    if arguments.lr0:
-        opts['lr0'] = arguments.lr0
-    if arguments.lrf:
-        opts['lrf'] = arguments.lrf
-    if arguments.momentum:
-        opts['momentum'] = arguments.momentum
-    if arguments.weight_decay:
-        opts['weight_decay'] = arguments.weight_decay
-    if arguments.warmup_epochs:
-        opts['warmup_epochs'] = arguments.warmup_epochs
-    if arguments.warmup_momentum:
-        opts['warmup_momentum'] = arguments.warmup_momentum
-    if arguments.warmup_bias_lr:
-        opts['warmup_bias_lr'] = arguments.warmup_bias_lr
-    if arguments.box:
-        opts['box'] = arguments.box
-    if arguments.cls:
-        opts['cls'] = arguments.cls
-    if arguments.cls_pw:
-        opts['cls_pw'] = arguments.cls_pw
-    if arguments.obj:
-        opts['obj'] = arguments.obj
-    if arguments.obj_pw:
-        opts['obj_pw'] = arguments.obj_pw
-    if arguments.iou_t:
-        opts['iou_t'] = arguments.iou_t
-    if arguments.anchor_t:
-        opts['anchor_t'] = arguments.anchor_t
-    if arguments.fl_gamma:
-        opts['fl_gamma'] = arguments.fl_gamma
-    if arguments.hsv_h:
-        opts['hsv_h'] = arguments.hsv_h
-    if arguments.hsv_s:
-        opts['hsv_s'] = arguments.hsv_s
-    if arguments.hsv_v:
-        opts['hsv_v'] = arguments.hsv_v
-    if arguments.degrees:
-        opts['degrees'] = arguments.degrees
-    if arguments.translate:
-        opts['translate'] = arguments.translate
-    if arguments.scale:
-        opts['scale'] = arguments.scale
-    if arguments.shear:
-        opts['shear'] = arguments.shear
-    if arguments.perspective:
-        opts['perspective'] = arguments.perspective
-    if arguments.flipud:
-        opts['flipud'] = arguments.flipud
-    if arguments.fliplr:
-        opts['fliplr'] = arguments.fliplr
-    if arguments.mosaic:
-        opts['mosaic'] = arguments.mosaic
-    if arguments.mixup:
-        opts['mixup'] = arguments.mixup
-    if arguments.copy_paste:
-        opts['copy_paste'] = arguments.copy_paste
+    initialstr = "/opt/conda/bin/python3.8 /yolov5/train.py --project /opt/ml/model --cache "
+
+    argls = (arguments.__dict__).items()    
+    
+    for arg in argls:
+        if arg[1] is None:
+            continue
+        elif arg[1] is not None and arg[0] in non_hyps:
+            if arg[0] == 'batchsize':
+                initialstr += " --batch " + str(arg[1])
+            else:
+                initialstr += " --" + str(arg[0]) + " " + str(arg[1])
+        else:
+            opts[str(arg[0])] = str(arg[1])
 
     initialstr += createHypsFile(opts)
+
     return initialstr
 
     
